@@ -252,22 +252,22 @@ app.get("/api/stats", (_req, res) => {
 app.get("/api/logs", (_req, res) => {
   res.json(
     logs.map((l) => {
-      const m = l.msg.match(/TX:\s*([A-Za-z0-9]{15,})/);
-      if (m) {
-        const sig = m[1];
+      let msg = l.msg.replace(/^\[WORKER\]\s*/i, ""); // remove [WORKER]
+      const match = msg.match(/TX:\s*([A-Za-z0-9]{15,})/);
+      if (match) {
+        const sig = match[1];
         const link = solscanTxLink(sig);
-        return {
-          msg: l.msg.replace(
-            `TX: ${sig}`,
-            `🔗 <a href="${link}" target="_blank" style="color:#9fff6f;text-decoration:underline;">TRANSACTION</a>`
-          ),
-          time: l.time,
-        };
+        // replace TX reference with clickable [TX] link
+        msg = msg.replace(
+          `TX: ${sig}`,
+          `<a href="${link}" target="_blank" style="color:#9fff6f;text-decoration:underline;font-weight:bold;">[TX]</a>`
+        );
       }
-      return l;
+      return { msg, time: l.time };
     })
   );
 });
+
 
 app.post("/api/ingest-log", (req, res) => {
   try {
@@ -396,3 +396,4 @@ app.listen(PORT, () => {
   console.log(`🚀 Pumpdrop metrics server running on port ${PORT}`);
   log(`🚀 Server started on port ${PORT}`);
 });
+

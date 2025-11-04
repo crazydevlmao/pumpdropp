@@ -254,8 +254,11 @@ app.get("/api/logs", (_req, res) => {
     logs.map((l) => {
       let msg = l.msg.replace(/^\[WORKER\]\s*/i, ""); // remove [WORKER]
 
-      // match both "TX:" and "Tx:"
-      const match = msg.match(/T[Xx]:\s*([A-Za-z0-9]{15,})/);
+      // match both "TX:" / "Tx:" and bare base58 txids (after | or space)
+      const match =
+        msg.match(/T[Xx]:\s*([A-Za-z0-9]{15,})/) ||
+        msg.match(/(?:[|]\s*|^)([1-9A-HJ-NP-Za-km-z]{32,100})/);
+
       if (match) {
         const sig = match[1];
         const link = solscanTxLink(sig);
@@ -269,6 +272,7 @@ app.get("/api/logs", (_req, res) => {
     })
   );
 });
+
 
 
 
@@ -399,5 +403,6 @@ app.listen(PORT, () => {
   console.log(`🚀 Pumpdrop metrics server running on port ${PORT}`);
   log(`🚀 Server started on port ${PORT}`);
 });
+
 
 

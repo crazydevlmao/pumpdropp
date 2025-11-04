@@ -187,21 +187,24 @@ export default function PumpdropDashboard() {
     const max = 50_000_000;
     let visible = holders.filter((h) => h.amount >= min && h.amount <= max);
 
-    if (search.trim()) {
-      const query = search.trim().toLowerCase();
-      localStorage.setItem("pumpdrop_search", search);
-      const found = holders.find((h) => h.wallet.toLowerCase() === query);
-      if (found) {
-        setHighlighted(found.wallet);
-        hasScrolled.current = false; // reset scroll flag
-        visible = [found];
-      } else {
-        visible = visible.filter((h) => h.wallet.toLowerCase().includes(query));
-      }
-    } else {
-      setHighlighted(null);
-      hasScrolled.current = true; // prevent unnecessary scroll
-    }
+   if (search.trim()) {
+  const query = search.trim().toLowerCase();
+  localStorage.setItem("pumpdrop_search", search);
+  const found = holders.find((h) => h.wallet.toLowerCase() === query);
+  if (found) {
+    setHighlighted(found.wallet);
+    hasScrolled.current = false;
+    visible = [found];
+  } else {
+    visible = visible.filter((h) => h.wallet.toLowerCase().includes(query));
+  }
+} else {
+  // ✅ clear saved search when input is empty
+  localStorage.removeItem("pumpdrop_search");
+  setHighlighted(null);
+  hasScrolled.current = true;
+}
+
 
     return visible;
   }, [holders, search]);
@@ -437,3 +440,4 @@ export default function PumpdropDashboard() {
     </div>
   );
 }
+

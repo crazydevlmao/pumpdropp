@@ -340,7 +340,11 @@ export default function PumpdropDashboard() {
                     key={`${log.time}-${i}`}
                     className="bg-[#181818] p-2 rounded-lg text-sm border border-[#242424] flex justify-between items-center"
                   >
-                    <div className="truncate mr-3">{log.msg}</div>
+                    <div
+  className="truncate mr-3"
+  dangerouslySetInnerHTML={{ __html: log.msg }}
+></div>
+
                     <div className="text-xs text-gray-500 whitespace-nowrap">{when}</div>
                   </div>
                 );
@@ -440,4 +444,5 @@ export default function PumpdropDashboard() {
     </div>
   );
 }
+
 

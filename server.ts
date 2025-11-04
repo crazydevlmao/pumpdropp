@@ -8,13 +8,21 @@ import fs from "fs";
 const PORT = Number(process.env.PORT || 4000);
 const HELIUS_KEY = process.env.HELIUS_KEY || "";
 const BIRDEYE_KEY = process.env.BIRDEYE_KEY || "";
-const DEV_WALLET = process.env.DEV_WALLET || "Bqx5ycNhbEbYtVrpA4UKuQiFZuyBEenTZJSdFz1Mb1bs";
-const TOKEN_CA = process.env.TOKEN_CA || "8rsZxFLwy8oxV5Tea2zbekNeZR4iitoNR44mV4nDKHx1";
-const PUMP_TOKEN_CA = process.env.PUMP_MINT || "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn";
+const DEV_WALLET =
+  process.env.DEV_WALLET || "Bqx5ycNhbEbYtVrpA4UKuQiFZuyBEenTZJSdFz1Mb1bs";
+const TOKEN_CA =
+  process.env.TOKEN_CA || "8rsZxFLwy8oxV5Tea2zbekNeZR4iitoNR44mV4nDKHx1";
+const PUMP_TOKEN_CA =
+  process.env.PUMP_MINT || "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn";
 const VALUE_MULTIPLIER = 0.004;
 const INITIAL_AIRDROP = 6469833; // 🔥 baseline airdrop
 const HELIUS_RPC = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`;
 const CACHE_FILE = "./pumpdrop_cache.json";
+const LOG_FILE = "./pumpdrop_logs.json"; // ✅ persist worker + server logs
+
+// ✅ include both program IDs (kept as-is for your stack)
+const TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const TOKEN_2022_PROGRAM_ID = "TokenzQdBNbLqP5VEhDWQ9VgjZbQRd7fLwZbyb3QT4";
 
 const app = express();
 app.use(cors());
@@ -32,48 +40,54 @@ type Cache = {
 let cache: Cache = {
   marketCap: 0,
   volume: 0,
-  totalPumpBought: INITIAL_AIRDROP,               // start from your manual base
-  totalValue: INITIAL_AIRDROP * VALUE_MULTIPLIER, // base * 0.004
+  totalPumpBought: INITIAL_AIRDROP,
+  totalValue: INITIAL_AIRDROP * VALUE_MULTIPLIER,
   lastUpdated: 0,
 };
 
-// ✅ load previous saved data (and add your baseline if not yet included)
+// ✅ load cache
 if (fs.existsSync(CACHE_FILE)) {
   try {
     const prev = JSON.parse(fs.readFileSync(CACHE_FILE, "utf8"));
     cache = { ...cache, ...prev };
-
-    // If the saved total is smaller than your baseline, add it once
     if (cache.totalPumpBought < INITIAL_AIRDROP) {
       cache.totalPumpBought += INITIAL_AIRDROP;
       cache.totalValue = cache.totalPumpBought * VALUE_MULTIPLIER;
-      console.log(`🔁 Added baseline ${INITIAL_AIRDROP.toLocaleString()} $PUMP to saved cache.`);
+      console.log(`🔁 Added baseline ${INITIAL_AIRDROP.toLocaleString()} $PUMP`);
     }
-
     console.log("💾 Loaded previous cache:", cache);
   } catch {}
 } else {
   console.log(`🆕 Starting fresh with baseline ${INITIAL_AIRDROP.toLocaleString()} $PUMP`);
 }
 
-
-// ✅ baseline starts AFTER loading cache, not before
 let BASELINE_PUMP_BOUGHT = cache.totalPumpBought;
 
-
+/* ================== LOGGING ================== */
 let logs: { msg: string; time: number }[] = [];
 
-/* ================== HELPERS ================== */
-function log(msg: string) {
+// ✅ load previous persisted logs
+if (fs.existsSync(LOG_FILE)) {
+  try {
+    logs = JSON.parse(fs.readFileSync(LOG_FILE, "utf8")) || [];
+    console.log(`💾 Loaded ${logs.length} previous logs`);
+  } catch {}
+}
+
+function log(msg: string, tag: "server" | "worker" = "server") {
+  if (!msg?.trim()) return;
   const ignore = [
     "⚠️ [AIRDROP] batch failed",
     "Transaction was not confirmed",
     "unknown if it succeeded",
   ];
   if (ignore.some((x) => msg.includes(x))) return;
-  console.log(msg);
-  logs.unshift({ msg, time: Date.now() });
-  logs = logs.slice(0, 200);
+
+  const tagged = tag === "worker" ? `[WORKER] ${msg}` : msg;
+  console.log(tagged);
+  logs.unshift({ msg: tagged, time: Date.now() });
+  logs = logs.slice(0, 400);
+  fs.writeFileSync(LOG_FILE, JSON.stringify(logs, null, 2));
 }
 
 function solscanTxLink(sig: string) {
@@ -116,14 +130,10 @@ async function getBirdeyeMarketData(): Promise<{ mcap: number; vol24h: number }>
   if (!vol24h) {
     try {
       const dex = (await fetch(
-  `https://api.dexscreener.com/latest/dex/tokens/${TOKEN_CA}`
-).then((r) => r.json().catch(() => ({})))) as { pairs?: any[] };
-
-const pair = dex.pairs?.[0];
-      vol24h =
-        Number(pair?.volume?.h24) ||
-        Number(pair?.volume24h) ||
-        0;
+        `https://api.dexscreener.com/latest/dex/tokens/${TOKEN_CA}`
+      ).then((r) => r.json().catch(() => ({})))) as { pairs?: any[] };
+      const pair = dex.pairs?.[0];
+      vol24h = Number(pair?.volume?.h24) || Number(pair?.volume24h) || 0;
     } catch (err) {
       log(`⚠️ [DEXSCREENER] fallback failed: ${(err as any)?.message}`);
     }
@@ -139,11 +149,10 @@ async function rpc<T = any>(method: string, params: any[]): Promise<T> {
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   });
 
-  const json = (await res.json().catch(() => ({}))) as any;   // ← cast to any
+  const json = (await res.json().catch(() => ({}))) as any;
   if (!res.ok || json.error) throw new Error(json.error?.message || res.statusText);
   return json.result as T;
 }
-
 
 function pumpCreditFromParsedTx(tx: any): number {
   if (!tx?.meta) return 0;
@@ -192,6 +201,18 @@ async function accumulateNewPumpBuys(): Promise<number> {
   }
 }
 
+/* ================== TOKEN DECIMALS (NEW: normalize holdings) ================== */
+let TOKEN_DECIMALS: number | null = null;
+
+async function getTokenDecimals(): Promise<number> {
+  if (TOKEN_DECIMALS !== null) return TOKEN_DECIMALS;
+  // Use standard Solana RPC method to fetch mint supply/decimals
+  const result = await rpc<any>("getTokenSupply", [TOKEN_CA]);
+  const dec = Number(result?.value?.decimals ?? 0);
+  TOKEN_DECIMALS = isFinite(dec) ? dec : 0;
+  return TOKEN_DECIMALS;
+}
+
 /* ================== UPDATE LOOP ================== */
 async function updateMetrics() {
   try {
@@ -205,13 +226,12 @@ async function updateMetrics() {
 
     fs.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2));
     log(
-  `✅ [UPDATE] Mcap $${mcap.toFixed(2)} | Vol24h $${vol24h.toFixed(
-    2
-  )} | Dev $PUMP ${cache.totalPumpBought.toFixed(6)} | Value Distributed $${(
-    cache.totalPumpBought * VALUE_MULTIPLIER
-  ).toFixed(2)}`
-);
-
+      `✅ [UPDATE] Mcap $${mcap.toFixed(2)} | Vol24h $${vol24h.toFixed(
+        2
+      )} | Dev $PUMP ${cache.totalPumpBought.toFixed(6)} | Value Distributed $${(
+        cache.totalPumpBought * VALUE_MULTIPLIER
+      ).toFixed(2)}`
+    );
   } catch (err: any) {
     log(`⚠️ [ERROR] ${err.message}`);
   }
@@ -219,8 +239,8 @@ async function updateMetrics() {
 
 /* ================== ENDPOINTS ================== */
 app.get("/api/stats", (_req, res) => {
-  // calculate current 24h distributed value dynamically
-  const sinceStartDistributed = (cache.totalPumpBought - BASELINE_PUMP_BOUGHT) * VALUE_MULTIPLIER;
+  const sinceStartDistributed =
+    (cache.totalPumpBought - BASELINE_PUMP_BOUGHT) * VALUE_MULTIPLIER;
 
   res.json({
     ...cache,
@@ -249,11 +269,123 @@ app.get("/api/logs", (_req, res) => {
   );
 });
 
-// ✅ optional endpoint for workers to push live console logs from Render
 app.post("/api/ingest-log", (req, res) => {
-  const msg = (req.body as any)?.msg?.toString?.() ?? "";
-  if (msg.trim()) log(msg.trim());
-  res.json({ ok: true });
+  try {
+    const msg = (req.body as any)?.msg?.toString?.() ?? "";
+    if (!msg.trim()) return res.json({ ok: false });
+
+    if (
+      /\[CLAIM\]|\[SWAP\]|\[AIRDROP\]/.test(msg) ||
+      msg.includes("🌊 [AIRDROP]") ||
+      msg.includes("✅ [AIRDROP]") ||
+      msg.includes("🎉 [AIRDROP]")
+    ) {
+      log(msg.trim(), "worker");
+    }
+    res.json({ ok: true });
+  } catch (err: any) {
+    log(`⚠️ [INGEST ERROR] ${err.message}`);
+    res.json({ ok: false });
+  }
+});
+
+/* ================== HOLDERS ENDPOINT (normalize by decimals) ================== */
+app.get("/api/holders", async (req, res) => {
+  try {
+    const walletQuery = (req.query.wallet as string)?.trim()?.toLowerCase();
+    const decimals = await getTokenDecimals();
+    const denom = Math.pow(10, decimals);
+
+    let cursor: string | null = null;
+    const parsed: { wallet: string; amount: number }[] = [];
+
+    // iterate a few pages to avoid huge scans
+    for (let page = 0; page < 5; page++) {
+      const params: any = {
+        mint: TOKEN_CA,
+        limit: 1000,
+      };
+      if (cursor) params.cursor = cursor;
+
+      const rpcBody = {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getTokenAccounts",
+        params,
+      };
+
+      const response = await fetch(HELIUS_RPC, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(rpcBody),
+      });
+
+      if (!response.ok) {
+        const txt = await response.text();
+        throw new Error(`Holders RPC HTTP ${response.status}: ${txt}`);
+      }
+
+      const data: any = await response.json();
+      if (data.error) throw new Error(data.error.message || "RPC error");
+
+      const tokenAccounts = data.result?.token_accounts || [];
+
+      for (const account of tokenAccounts) {
+        const owner = String(account.owner || account.ownerAddress || "");
+        // Prefer raw integer amount when available, then normalize.
+        // Fallback to any uiAmount-like field if present.
+        let amountNorm = 0;
+
+        if (account.amount !== undefined && account.amount !== null) {
+          // raw integer (string or number)
+          const raw = Number(account.amount);
+          amountNorm = isFinite(raw) ? raw / denom : 0;
+        } else if (account.tokenAmount?.amount) {
+          const raw = Number(account.tokenAmount.amount);
+          amountNorm = isFinite(raw) ? raw / denom : 0;
+        } else if (account.uiAmount !== undefined) {
+          amountNorm = Number(account.uiAmount) || 0;
+        } else if (account.tokenAmount?.uiAmount !== undefined) {
+          amountNorm = Number(account.tokenAmount.uiAmount) || 0;
+        }
+
+        if (owner) parsed.push({ wallet: owner, amount: amountNorm });
+      }
+
+      cursor = data.result?.cursor || null;
+      if (!cursor) break;
+    }
+
+    // Aggregate by wallet (if multiple token accounts per owner)
+    const byWallet: Record<string, number> = {};
+    for (const p of parsed) {
+      if (!p.wallet) continue;
+      byWallet[p.wallet] = (byWallet[p.wallet] || 0) + (isFinite(p.amount) ? p.amount : 0);
+    }
+
+    const aggregated = Object.entries(byWallet).map(([wallet, amount]) => ({ wallet, amount }));
+
+    // Filter > 200k, sort desc, rank
+    const holders = aggregated
+      .filter((h) => h.amount > 200_000)
+      .sort((a, b) => b.amount - a.amount)
+      .map((h, i) => ({ rank: i + 1, wallet: h.wallet, amount: h.amount }));
+
+    // If wallet query, return rank for that wallet based on full sorted list
+    if (walletQuery) {
+      const allSorted = aggregated.sort((a, b) => b.amount - a.amount);
+      const found = allSorted.find((h) => h.wallet.toLowerCase() === walletQuery);
+      if (found) {
+        const rank = allSorted.findIndex((h) => h.wallet.toLowerCase() === walletQuery) + 1;
+        return res.json({ rank, wallet: found.wallet, amount: found.amount, holders });
+      }
+    }
+
+    res.json({ holders });
+  } catch (err: any) {
+    log(`⚠️ [HOLDERS ERROR] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /* ================== BOOT ================== */

@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, CheckCircle } from "lucide-react";
+// Prevent "localStorage is not defined" during SSR
 if (typeof window === "undefined") {
-  global.localStorage = {
+  (global as any).localStorage = {
     getItem: () => null,
     setItem: () => {},
     removeItem: () => {},
-  };
+    clear: () => {},
+    key: () => null,
+    length: 0,
+  } as Storage;
 }
+
 
 function resolveApiBase(): string {
   const fromWindow =
@@ -451,6 +456,7 @@ export default function PumpdropDashboard() {
     </div>
   );
 }
+
 
 
 

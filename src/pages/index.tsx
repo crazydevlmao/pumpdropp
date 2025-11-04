@@ -223,103 +223,125 @@ export default function PumpdropDashboard() {
 
   return (
     <div className="min-h-screen h-screen bg-[#111111] text-white flex flex-col font-sans overflow-hidden">
-      {/* ✅ ORIGINAL TOP BAR */}
-      <div className="w-full flex justify-between items-center p-4 border-b border-[#242424] bg-[#0f0f0f] relative">
-        <h1 className="text-lg font-bold text-[#9fff6f] tracking-wide">
-          $PUMPDROP Dashboard {healthyBadge}
-        </h1>
-        <div className="flex flex-col items-center absolute left-1/2 transform -translate-x-1/2">
-          <div className="flex items-center gap-2 mb-1 relative">
-            <span className="font-mono text-[#9fff6f] text-sm">{MINT_CA}</span>
-            <motion.button
-              onClick={copyCA}
-              whileTap={{ scale: 0.94 }}
-              className="flex items-center gap-1 px-2 py-1 bg-[#9fff6f] text-black font-bold rounded hover:bg-[#baff85] text-sm relative overflow-hidden"
-            >
-              <Copy size={14} /> Copy
-            </motion.button>
-            <AnimatePresence>
-  {showInfo && (
-    <>
-      {/* backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 z-40"
-        onClick={() => setShowInfo(false)}
-      ></div>
+  {/* ✅ CLEAN RESPONSIVE HEADER */}
+<div className="w-full border-b border-[#242424] bg-[#0f0f0f] p-3 md:p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+  {/* Left: Title + Status */}
+  <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 text-center md:text-left">
+    <h1 className="text-base md:text-lg font-bold text-[#9fff6f] tracking-wide">
+      $PUMPDROP Dashboard
+    </h1>
+    <span
+      className={`inline-block mx-auto md:mx-0 text-[10px] md:text-xs px-2 py-[2px] rounded border ${
+        apiHealthy === null
+          ? "bg-zinc-700 text-zinc-200 border-zinc-600"
+          : apiHealthy
+          ? "bg-emerald-500/20 text-emerald-300 border-emerald-600/40"
+          : "bg-rose-500/10 text-rose-300 border-rose-600/30"
+      }`}
+    >
+      {apiHealthy === null
+        ? "connecting…"
+        : apiHealthy
+        ? "live"
+        : "offline"}
+    </span>
+  </div>
 
-      {/* modal */}
-      <motion.div
-        key="howItWorksModal"
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        transition={{ duration: 0.25 }}
-        className="fixed top-24 right-6 w-[28rem] bg-[#121212] border border-[#242424] rounded-xl p-6 text-gray-200 shadow-2xl backdrop-blur-lg z-50"
-        onClick={(e) => e.stopPropagation()} // prevent backdrop from closing
-      >
-        <h2 className="text-[#9fff6f] font-bold text-xl mb-2">
-          How $PUMPDROP Works
-        </h2>
-        <p className="text-sm leading-relaxed text-gray-300">
-          The bot claims creator rewards in SOL, swaps 70% into{" "}
-          <span className="text-[#9fff6f]">$PUMP</span>, and airdrops
-          proportionally to eligible holders of{" "}
-          <span className="text-[#9fff6f]">$PUMPDROP</span>. Wallets below
-          200,000 $PUMPDROP and whales above 50,000,000 $PUMPDROP are excluded
-          for fair distribution.
-        </p>
-        <ul className="list-disc list-inside mt-3 space-y-1 text-gray-400 text-sm">
-          <li>
-            Token CA:{" "}
-            <span className="text-[#baff85] font-mono">{MINT_CA}</span>
-          </li>
-          <li>Live metrics auto-updated</li>
-          <li>Activity feed mirrors worker logs in near real time</li>
-        </ul>
-        <button
-          type="button"
+  {/* Center: CA + Copy */}
+  <div className="flex flex-col items-center md:flex-row md:gap-2 text-center md:text-left">
+    <span className="font-mono text-[#9fff6f] text-[11px] md:text-sm truncate max-w-[90vw] md:max-w-none mb-1 md:mb-0">
+      {MINT_CA}
+    </span>
+    <motion.button
+      onClick={copyCA}
+      whileTap={{ scale: 0.94 }}
+      className="flex items-center gap-1 px-2 py-[2px] md:px-2 md:py-1 bg-[#9fff6f] text-black font-bold rounded hover:bg-[#baff85] text-[10px] md:text-sm"
+    >
+      <Copy size={12} /> Copy
+    </motion.button>
+  </div>
+
+  {/* Right: Buttons */}
+  <div className="flex justify-center md:justify-end gap-2 md:gap-3">
+    <button
+      onClick={() =>
+        window.open(`https://pump.fun/coin/${MINT_CA}`, "_blank", "noopener,noreferrer")
+      }
+      className="px-3 py-1 text-[10px] md:text-sm bg-[#9fff6f] text-black font-bold rounded hover:bg-[#baff85]"
+    >
+      BUY
+    </button>
+    <button
+      onClick={() =>
+        window.open(
+          "https://x.com/i/communities/1985037307443904998",
+          "_blank",
+          "noopener,noreferrer"
+        )
+      }
+      className="px-3 py-1 text-[10px] md:text-sm bg-[#9fff6f] text-black font-bold rounded hover:bg-[#baff85]"
+    >
+      X
+    </button>
+    <motion.button
+      onClick={() => setShowInfo(!showInfo)}
+      animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.05, 1] }}
+      transition={{ repeat: Infinity, repeatDelay: 1, duration: 1.5, ease: "easeInOut" }}
+      className="px-3 py-1 text-[10px] md:text-sm bg-[#9fff6f] text-black font-bold rounded hover:bg-[#baff85]"
+    >
+      How It Works
+    </motion.button>
+  </div>
+
+  {/* Modal */}
+  <AnimatePresence>
+    {showInfo && (
+      <>
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
           onClick={() => setShowInfo(false)}
-          className="mt-4 px-4 py-1 bg-[#9fff6f] text-black font-bold rounded hover:bg-[#baff85]"
+        ></div>
+        <motion.div
+          key="howItWorksModal"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ duration: 0.25 }}
+          className="fixed top-24 right-6 w-[92%] md:w-[28rem] bg-[#121212] border border-[#242424] rounded-xl p-5 text-gray-200 shadow-2xl backdrop-blur-lg z-50"
+          onClick={(e) => e.stopPropagation()}
         >
-          Close
-        </button>
-      </motion.div>
-    </>
-  )}
-</AnimatePresence>
-          </div>
-        </div>
-        <div className="flex gap-3 items-center">
+          <h2 className="text-[#9fff6f] font-bold text-base md:text-xl mb-2">
+            How $PUMPDROP Works
+          </h2>
+          <p className="text-xs md:text-sm leading-relaxed text-gray-300">
+            The bot claims creator rewards in SOL, swaps 70% into{" "}
+            <span className="text-[#9fff6f]">$PUMP</span>, and airdrops
+            proportionally to eligible holders of{" "}
+            <span className="text-[#9fff6f]">$PUMPDROP</span>. Wallets below
+            200,000 $PUMPDROP and whales above 50,000,000 $PUMPDROP are excluded
+            for fair distribution.
+          </p>
+          <ul className="list-disc list-inside mt-3 space-y-1 text-gray-400 text-xs md:text-sm">
+            <li>
+              Token CA:{" "}
+              <span className="text-[#baff85] font-mono break-all">{MINT_CA}</span>
+            </li>
+            <li>Live metrics auto-updated</li>
+            <li>Activity feed mirrors worker logs in near real time</li>
+          </ul>
           <button
-            onClick={() =>
-              window.open(`https://pump.fun/coin/${MINT_CA}`, "_blank", "noopener,noreferrer")
-            }
-            className="px-3 py-1 bg-[#9fff6f] text-black font-bold rounded hover:bg-[#baff85]"
+            type="button"
+            onClick={() => setShowInfo(false)}
+            className="mt-4 px-4 py-1 bg-[#9fff6f] text-black font-bold rounded hover:bg-[#baff85]"
           >
-            BUY
+            Close
           </button>
-          <button
-            onClick={() =>
-              window.open(
-                "https://x.com/i/communities/1985037307443904998",
-                "_blank",
-                "noopener,noreferrer"
-              )
-            }
-            className="px-3 py-1 bg-[#9fff6f] text-black font-bold rounded hover:bg-[#baff85]"
-          >
-            X
-          </button>
-          <motion.button
-            onClick={() => setShowInfo(!showInfo)}
-            animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.05, 1] }}
-            transition={{ repeat: Infinity, repeatDelay: 1, duration: 1.5, ease: "easeInOut" }}
-            className="px-3 py-1 bg-[#9fff6f] text-black font-bold rounded hover:bg-[#baff85]"
-          >
-            How It Works
-          </motion.button>
-        </div>
-      </div>
+        </motion.div>
+      </>
+    )}
+  </AnimatePresence>
+</div>
+
 
       <div className="flex-1 flex flex-col justify-between items-center px-4 py-4 gap-3 max-w-5xl w-full mx-auto overflow-hidden">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full shrink-0">
@@ -456,7 +478,6 @@ export default function PumpdropDashboard() {
     </div>
   );
 }
-
 
 
 

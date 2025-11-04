@@ -6,8 +6,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-
-    /* ✅ Added for Render backend (server.ts only) */
     "build:server": "tsc -p tsconfig.server.json",
     "start:server": "node dist/server.js"
   },

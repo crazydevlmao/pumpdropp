@@ -5,11 +5,15 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+
+    /* ✅ Added for Render backend (server.ts only) */
+    "build:server": "tsc -p tsconfig.server.json",
+    "start:server": "node dist/server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
+    "dotenv": "^16.4.5",
     "express": "^5.1.0",
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.552.0",

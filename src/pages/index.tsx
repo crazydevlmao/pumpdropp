@@ -137,7 +137,7 @@ export default function PumpdropDashboard() {
             .filter((x) => x && typeof x.msg === "string" && typeof x.time === "number")
             .filter((x) => workerKeywords.some((k) => x.msg.includes(k)))
             .filter((x) => !ignoredPatterns.some((k) => x.msg.includes(k)))
-            .filter((x) => Date.now() - x.time < 600_000)
+            .filter((x) => Date.now() - x.time < 1_200_000)
             .sort((a, b) => b.time - a.time)
             .slice(0, 200);
           setLogs(cleansed);
@@ -478,6 +478,7 @@ export default function PumpdropDashboard() {
     </div>
   );
 }
+
 
 
 

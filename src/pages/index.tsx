@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, CheckCircle } from "lucide-react";
+if (typeof window === "undefined") {
+  global.localStorage = {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+  };
+}
 
 function resolveApiBase(): string {
   const fromWindow =
@@ -444,5 +451,6 @@ export default function PumpdropDashboard() {
     </div>
   );
 }
+
 
 

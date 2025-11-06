@@ -318,7 +318,7 @@ export default function PumpdropDashboard() {
             <span className="text-[#9fff6f]">$PUMP</span>, and airdrops
             proportionally to eligible holders of{" "}
             <span className="text-[#9fff6f]">$PUMPDROP</span>. Wallets below
-            200,000 $PUMPDROP and whales above 50,000,000 $PUMPDROP are excluded
+            300,000 $PUMPDROP and whales above 50,000,000 $PUMPDROP are excluded
             for fair distribution.
           </p>
           <ul className="list-disc list-inside mt-3 space-y-1 text-gray-400 text-xs md:text-sm">
@@ -478,6 +478,7 @@ export default function PumpdropDashboard() {
     </div>
   );
 }
+
 
 
 

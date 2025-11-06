@@ -172,10 +172,17 @@ function pumpCreditFromParsedTx(tx: any): number {
 }
 
 const seenTxs = new Set<string>();
+let lastTxCheck = 0; // ⬅️ add this line
+const TX_CHECK_INTERVAL = 60_000; // 1 minute cooldown
 
 async function accumulateNewPumpBuys(): Promise<number> {
+  const now = Date.now();
+  if (now - lastTxCheck < TX_CHECK_INTERVAL) return cache.totalPumpBought; // ⬅️ throttle calls
+  lastTxCheck = now;
+
   try {
-    const sigs = await rpc<any[]>("getSignaturesForAddress", [DEV_WALLET, { limit: 50 }]);
+    const sigs = await rpc<any[]>("getSignaturesForAddress", [DEV_WALLET, { limit: 20 }]); // ⬅️ smaller batch
+
     for (const s of sigs) {
       const sig = s?.signature;
       if (!sig || seenTxs.has(sig)) continue;
@@ -396,13 +403,14 @@ app.get("/api/holders", async (req, res) => {
 });
 
 /* ================== BOOT ================== */
-setInterval(updateMetrics, 10_000);
+setInterval(updateMetrics, 30_000);
 updateMetrics();
 
 app.listen(PORT, () => {
   console.log(`🚀 Pumpdrop metrics server running on port ${PORT}`);
   log(`🚀 Server started on port ${PORT}`);
 });
+
 
 
 

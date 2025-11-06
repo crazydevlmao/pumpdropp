@@ -15,7 +15,7 @@ const TOKEN_CA =
 const PUMP_TOKEN_CA =
   process.env.PUMP_MINT || "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn";
 const VALUE_MULTIPLIER = 0.004;
-const INITIAL_AIRDROP = 6469833; // 🔥 baseline airdrop
+const INITIAL_AIRDROP = 7469833; // 🔥 baseline airdrop
 const HELIUS_RPC = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`;
 const CACHE_FILE = "./pumpdrop_cache.json";
 const LOG_FILE = "./pumpdrop_logs.json"; // ✅ persist worker + server logs
@@ -410,6 +410,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Pumpdrop metrics server running on port ${PORT}`);
   log(`🚀 Server started on port ${PORT}`);
 });
+
 
 
 
